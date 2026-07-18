@@ -1,5 +1,13 @@
 # AI MCQ Quality Analyzer
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://testinflow-mcq-analyzer.streamlit.app)
+
+## Live Demo
+
+Try the application online:
+
+**[Launch AI MCQ Quality Analyzer](https://testinflow-mcq-analyzer.streamlit.app)**
+
 A lightweight NLP-based web application for evaluating the structural quality, readability, difficulty, Bloom’s taxonomy level, and distractor similarity of multiple-choice questions.
 
 The project is being developed as part of the **TestInFlow AI Lab** to support teachers in designing clearer and more effective assessments.
