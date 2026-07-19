@@ -724,6 +724,17 @@ if uploaded_file is not None:
                     "higher education": "Higher Education"
                 }
 
+                allowed_answers = {
+                    "a": "Option A",
+                    "b": "Option B",
+                    "c": "Option C",
+                    "d": "Option D",
+                    "option a": "Option A",
+                    "option b": "Option B",
+                    "option c": "Option C",
+                    "option d": "Option D"
+                }
+
                 analysis_rows = []
 
                 for index, row in batch_data.iterrows():
@@ -741,6 +752,7 @@ if uploaded_file is not None:
                     batch_answer = clean_csv_value(
                         row["correct_answer"]
                     )
+                    normalized_answer = batch_answer.lower()
                     batch_subject = clean_csv_value(
                         row["subject"]
                     )
@@ -759,6 +771,25 @@ if uploaded_file is not None:
                             "grade_level": raw_grade,
                             "correct_answer": batch_answer,
                             "status": "Invalid: missing question or option",
+                            "quality_score": None,
+                            "grammar_clarity_score": None,
+                            "difficulty": "",
+                            "readability_grade": None,
+                            "bloom_level": "",
+                            "maximum_option_similarity": None,
+                            "issues": "",
+                            "suggestions": ""
+                        })
+                        continue
+
+                    if normalized_answer not in allowed_answers:
+                        analysis_rows.append({
+                            "row_number": row_number,
+                            "question": batch_question,
+                            "subject": batch_subject,
+                            "grade_level": raw_grade,
+                            "correct_answer": batch_answer,
+                            "status": "Invalid correct answer",
                             "quality_score": None,
                             "grammar_clarity_score": None,
                             "difficulty": "",
@@ -790,6 +821,7 @@ if uploaded_file is not None:
                         continue
 
                     selected_grade = allowed_grades[normalized_grade]
+                    batch_answer = allowed_answers[normalized_answer]
                     batch_result = analyze_mcq(
                         batch_question,
                         batch_options,
