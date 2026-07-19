@@ -1,5 +1,6 @@
 import re
 
+import pandas as pd
 import streamlit as st
 import textstat
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -10,7 +11,7 @@ from clarity_analyzer import analyze_grammar_and_clarity
 
 st.set_page_config(
     page_title="AI MCQ Quality Analyzer",
-    page_icon="✅",
+    page_icon=":material/quiz:",
     layout="centered"
 )
 
@@ -516,7 +517,7 @@ if st.button(
         )
 
         st.write(
-            f"**Bloom’s Taxonomy:** "
+            f"**Bloom's Taxonomy:** "
             f"{result['bloom_level']}"
         )
 
@@ -555,7 +556,7 @@ if st.button(
 
             for strength in result["strengths"]:
                 st.write(
-                    f"✅ {strength}"
+                    f"[OK] {strength}"
                 )
 
         if result["warnings"]:
@@ -563,7 +564,7 @@ if st.button(
 
             for warning in result["warnings"]:
                 st.write(
-                    f"⚠️ {warning}"
+                    f"[ISSUE] {warning}"
                 )
 
         if result["suggestions"]:
@@ -573,7 +574,7 @@ if st.button(
 
             for suggestion in result["suggestions"]:
                 st.write(
-                    f"💡 {suggestion}"
+                    f"[TIP] {suggestion}"
                 )
 
         st.subheader("Grammar & Clarity Analysis")
@@ -583,14 +584,14 @@ if st.button(
         if clarity_result["issues"]:
             for issue in clarity_result["issues"]:
                 st.write(
-                    f"⚠️ {issue}"
+                    f"[ISSUE] {issue}"
                 )
 
             st.write("**Grammar and clarity suggestions:**")
 
             for suggestion in clarity_result["suggestions"]:
                 st.write(
-                    f"💡 {suggestion}"
+                    f"[TIP] {suggestion}"
                 )
 
         else:
@@ -602,7 +603,7 @@ if st.button(
             with st.expander("Grammar and clarity strengths"):
                 for strength in clarity_result["strengths"]:
                     st.write(
-                        f"✅ {strength}"
+                        f"[OK] {strength}"
                     )
 
         with st.expander(
@@ -622,7 +623,7 @@ if st.button(
 
             st.write(
                 "Readability method:",
-                "Flesch–Kincaid grade level"
+                "Flesch-Kincaid grade level"
             )
 
             st.write(
@@ -635,4 +636,287 @@ if st.button(
                     "The readability score is displayed, "
                     "but no readability penalty was applied "
                     "because the question is very short."
+                )
+
+
+st.divider()
+st.header("Batch MCQ Analysis")
+st.write(
+    "Upload a CSV file to evaluate multiple MCQs and download "
+    "a complete quality report."
+)
+
+required_columns = [
+    "question",
+    "option_a",
+    "option_b",
+    "option_c",
+    "option_d",
+    "correct_answer",
+    "subject",
+    "grade_level"
+]
+
+st.caption(
+    "Required columns: "
+    + ", ".join(required_columns)
+)
+
+uploaded_file = st.file_uploader(
+    "Upload MCQ CSV file",
+    type=["csv"]
+)
+
+
+def clean_csv_value(value):
+    if pd.isna(value):
+        return ""
+
+    return str(value).strip()
+
+
+if uploaded_file is not None:
+    try:
+        batch_data = pd.read_csv(uploaded_file)
+    except Exception as error:
+        st.error(
+            "The CSV file could not be read. Please use a valid CSV file."
+        )
+        st.caption(f"Technical detail: {error}")
+    else:
+        batch_data.columns = [
+            str(column).strip().lower()
+            for column in batch_data.columns
+        ]
+
+        missing_columns = [
+            column
+            for column in required_columns
+            if column not in batch_data.columns
+        ]
+
+        if missing_columns:
+            st.error(
+                "Missing required columns: "
+                + ", ".join(missing_columns)
+            )
+        elif batch_data.empty:
+            st.warning("The uploaded CSV file does not contain any MCQs.")
+        else:
+            st.success(
+                f"CSV loaded successfully: {len(batch_data)} MCQ(s) found."
+            )
+
+            with st.expander("Preview uploaded MCQs"):
+                st.dataframe(
+                    batch_data,
+                    use_container_width=True
+                )
+
+            if st.button(
+                "Analyze Uploaded MCQs",
+                type="primary"
+            ):
+                allowed_grades = {
+                    "primary": "Primary",
+                    "middle": "Middle",
+                    "secondary": "Secondary",
+                    "higher education": "Higher Education"
+                }
+
+                allowed_answers = {
+                    "a": "Option A",
+                    "b": "Option B",
+                    "c": "Option C",
+                    "d": "Option D",
+                    "option a": "Option A",
+                    "option b": "Option B",
+                    "option c": "Option C",
+                    "option d": "Option D"
+                }
+
+                analysis_rows = []
+
+                for index, row in batch_data.iterrows():
+                    batch_question = clean_csv_value(
+                        row["question"]
+                    )
+
+                    batch_options = [
+                        clean_csv_value(row["option_a"]),
+                        clean_csv_value(row["option_b"]),
+                        clean_csv_value(row["option_c"]),
+                        clean_csv_value(row["option_d"])
+                    ]
+
+                    batch_answer = clean_csv_value(
+                        row["correct_answer"]
+                    )
+                    normalized_answer = batch_answer.lower()
+                    batch_subject = clean_csv_value(
+                        row["subject"]
+                    )
+                    raw_grade = clean_csv_value(
+                        row["grade_level"]
+                    )
+                    normalized_grade = raw_grade.lower()
+
+                    row_number = index + 2
+
+                    if not batch_question or not all(batch_options):
+                        analysis_rows.append({
+                            "row_number": row_number,
+                            "question": batch_question,
+                            "subject": batch_subject,
+                            "grade_level": raw_grade,
+                            "correct_answer": batch_answer,
+                            "status": "Invalid: missing question or option",
+                            "quality_score": None,
+                            "grammar_clarity_score": None,
+                            "difficulty": "",
+                            "readability_grade": None,
+                            "bloom_level": "",
+                            "maximum_option_similarity": None,
+                            "issues": "",
+                            "suggestions": ""
+                        })
+                        continue
+
+                    if normalized_answer not in allowed_answers:
+                        analysis_rows.append({
+                            "row_number": row_number,
+                            "question": batch_question,
+                            "subject": batch_subject,
+                            "grade_level": raw_grade,
+                            "correct_answer": batch_answer,
+                            "status": "Invalid correct answer",
+                            "quality_score": None,
+                            "grammar_clarity_score": None,
+                            "difficulty": "",
+                            "readability_grade": None,
+                            "bloom_level": "",
+                            "maximum_option_similarity": None,
+                            "issues": "",
+                            "suggestions": ""
+                        })
+                        continue
+
+                    if normalized_grade not in allowed_grades:
+                        analysis_rows.append({
+                            "row_number": row_number,
+                            "question": batch_question,
+                            "subject": batch_subject,
+                            "grade_level": raw_grade,
+                            "correct_answer": batch_answer,
+                            "status": "Invalid grade level",
+                            "quality_score": None,
+                            "grammar_clarity_score": None,
+                            "difficulty": "",
+                            "readability_grade": None,
+                            "bloom_level": "",
+                            "maximum_option_similarity": None,
+                            "issues": "",
+                            "suggestions": ""
+                        })
+                        continue
+
+                    selected_grade = allowed_grades[normalized_grade]
+                    batch_answer = allowed_answers[normalized_answer]
+                    batch_result = analyze_mcq(
+                        batch_question,
+                        batch_options,
+                        selected_grade
+                    )
+
+                    combined_issues = (
+                        batch_result["warnings"]
+                        + batch_result["clarity_result"]["issues"]
+                    )
+                    combined_suggestions = (
+                        batch_result["suggestions"]
+                        + batch_result["clarity_result"]["suggestions"]
+                    )
+
+                    analysis_rows.append({
+                        "row_number": row_number,
+                        "question": batch_question,
+                        "subject": batch_subject,
+                        "grade_level": selected_grade,
+                        "correct_answer": batch_answer,
+                        "status": "Analyzed",
+                        "quality_score": batch_result["score"],
+                        "grammar_clarity_score": (
+                            100
+                            - batch_result["clarity_result"]["penalty"]
+                        ),
+                        "difficulty": batch_result["difficulty"],
+                        "readability_grade": batch_result[
+                            "readability_grade"
+                        ],
+                        "bloom_level": batch_result["bloom_level"],
+                        "maximum_option_similarity": round(
+                            batch_result["maximum_similarity"],
+                            3
+                        ),
+                        "issues": " | ".join(combined_issues),
+                        "suggestions": " | ".join(
+                            combined_suggestions
+                        )
+                    })
+
+                report_data = pd.DataFrame(analysis_rows)
+                valid_results = report_data[
+                    report_data["status"] == "Analyzed"
+                ]
+
+                st.subheader("Batch Analysis Summary")
+
+                if valid_results.empty:
+                    st.error(
+                        "No valid MCQs were available for analysis."
+                    )
+                else:
+                    summary_1, summary_2, summary_3, summary_4 = (
+                        st.columns(4)
+                    )
+
+                    summary_1.metric(
+                        "MCQs Analyzed",
+                        len(valid_results)
+                    )
+                    summary_2.metric(
+                        "Average Quality",
+                        f"{valid_results['quality_score'].mean():.1f}/100"
+                    )
+                    summary_3.metric(
+                        "Good-quality MCQs",
+                        int(
+                            (
+                                valid_results["quality_score"] >= 80
+                            ).sum()
+                        )
+                    )
+                    summary_4.metric(
+                        "Need Improvement",
+                        int(
+                            (
+                                valid_results["quality_score"] < 80
+                            ).sum()
+                        )
+                    )
+
+                st.dataframe(
+                    report_data,
+                    use_container_width=True
+                )
+
+                report_csv = report_data.to_csv(
+                    index=False
+                ).encode("utf-8")
+
+                st.download_button(
+                    "Download Analysis Report",
+                    data=report_csv,
+                    file_name="mcq_quality_analysis_report.csv",
+                    mime="text/csv"
                 )
