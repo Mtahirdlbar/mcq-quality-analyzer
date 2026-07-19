@@ -5,6 +5,8 @@ import textstat
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from clarity_analyzer import analyze_grammar_and_clarity
+
 
 st.set_page_config(
     page_title="AI MCQ Quality Analyzer",
@@ -434,6 +436,12 @@ def analyze_mcq(
         bloom_level
     )
 
+    clarity_result = analyze_grammar_and_clarity(
+        clean_question
+    )
+
+    score -= clarity_result["penalty"]
+
     score = max(
         0,
         min(score, 100)
@@ -447,7 +455,8 @@ def analyze_mcq(
         "bloom_level": bloom_level,
         "difficulty": difficulty,
         "readability_grade": readability_grade,
-        "maximum_similarity": maximum_similarity
+        "maximum_similarity": maximum_similarity,
+        "clarity_result": clarity_result
     }
 
 
@@ -484,7 +493,7 @@ if st.button(
         st.divider()
         st.subheader("Analysis Results")
 
-        column_1, column_2, column_3 = st.columns(3)
+        column_1, column_2, column_3, column_4 = st.columns(4)
 
         column_1.metric(
             "Quality Score",
@@ -499,6 +508,11 @@ if st.button(
         column_3.metric(
             "Readability Grade",
             result["readability_grade"]
+        )
+
+        column_4.metric(
+            "Grammar & Clarity",
+            f"{100 - result['clarity_result']['penalty']}/100"
         )
 
         st.write(
@@ -562,6 +576,35 @@ if st.button(
                     f"💡 {suggestion}"
                 )
 
+        st.subheader("Grammar & Clarity Analysis")
+
+        clarity_result = result["clarity_result"]
+
+        if clarity_result["issues"]:
+            for issue in clarity_result["issues"]:
+                st.write(
+                    f"⚠️ {issue}"
+                )
+
+            st.write("**Grammar and clarity suggestions:**")
+
+            for suggestion in clarity_result["suggestions"]:
+                st.write(
+                    f"💡 {suggestion}"
+                )
+
+        else:
+            st.success(
+                "No basic grammar or clarity problems were detected."
+            )
+
+        if clarity_result["strengths"]:
+            with st.expander("Grammar and clarity strengths"):
+                for strength in clarity_result["strengths"]:
+                    st.write(
+                        f"✅ {strength}"
+                    )
+
         with st.expander(
             "Technical NLP Details"
         ):
@@ -580,6 +623,11 @@ if st.button(
             st.write(
                 "Readability method:",
                 "Flesch–Kincaid grade level"
+            )
+
+            st.write(
+                "Grammar and clarity method:",
+                "Explainable heuristic language checks"
             )
 
             if len(question.split()) < 10:
