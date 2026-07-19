@@ -10,7 +10,7 @@ from clarity_analyzer import analyze_grammar_and_clarity
 
 st.set_page_config(
     page_title="AI MCQ Quality Analyzer",
-    page_icon="âœ…",
+    page_icon="✅",
     layout="centered"
 )
 
@@ -516,7 +516,7 @@ if st.button(
         )
 
         st.write(
-            f"**Bloomâ€™s Taxonomy:** "
+            f"**Bloom’s Taxonomy:** "
             f"{result['bloom_level']}"
         )
 
@@ -555,7 +555,7 @@ if st.button(
 
             for strength in result["strengths"]:
                 st.write(
-                    f"âœ… {strength}"
+                    f"✅ {strength}"
                 )
 
         if result["warnings"]:
@@ -563,7 +563,7 @@ if st.button(
 
             for warning in result["warnings"]:
                 st.write(
-                    f"âš ï¸ {warning}"
+                    f"⚠️ {warning}"
                 )
 
         if result["suggestions"]:
@@ -573,7 +573,7 @@ if st.button(
 
             for suggestion in result["suggestions"]:
                 st.write(
-                    f"ðŸ’¡ {suggestion}"
+                    f"💡 {suggestion}"
                 )
 
         st.subheader("Grammar & Clarity Analysis")
@@ -583,14 +583,14 @@ if st.button(
         if clarity_result["issues"]:
             for issue in clarity_result["issues"]:
                 st.write(
-                    f"âš ï¸ {issue}"
+                    f"⚠️ {issue}"
                 )
 
             st.write("**Grammar and clarity suggestions:**")
 
             for suggestion in clarity_result["suggestions"]:
                 st.write(
-                    f"ðŸ’¡ {suggestion}"
+                    f"💡 {suggestion}"
                 )
 
         else:
@@ -602,7 +602,7 @@ if st.button(
             with st.expander("Grammar and clarity strengths"):
                 for strength in clarity_result["strengths"]:
                     st.write(
-                        f"âœ… {strength}"
+                        f"✅ {strength}"
                     )
 
         with st.expander(
@@ -622,7 +622,7 @@ if st.button(
 
             st.write(
                 "Readability method:",
-                "Fleschâ€“Kincaid grade level"
+                "Flesch–Kincaid grade level"
             )
 
             st.write(
